@@ -24,7 +24,7 @@ class AutoChess(QWidget):
 
   def start(self):
     while not self.board.is_game_over():
-      self.calculateNextMove(True)
+      self.calculateNextMove()
     else:
       winner = 'White' if self.board.turn == chess.WHITE else 'Black'
       print('Winner: ' + winner)
@@ -33,7 +33,7 @@ class AutoChess(QWidget):
     self.board.push(move)
     self.refresh()
 
-  def calculateNextMove(self, isRandom):
+  def calculateNextMove(self):
     move = self.getWhiteMove() if self.board.turn == chess.WHITE else self.getBlackMove()
     self.think()
     if move in self.board.legal_moves:
