@@ -7,6 +7,11 @@ from random import randint
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget
 
+class MoveProbability:
+  def __init__(self, move, probability):
+    self.move = move
+    self.probability = probability 
+
 class AutoChess(QWidget):
   def __init__(self):
     super().__init__()
@@ -26,8 +31,10 @@ class AutoChess(QWidget):
     while not self.board.is_game_over():
       self.calculateNextMove()
     else:
-      winner = 'White' if self.board.turn == chess.WHITE else 'Black'
-      print('Winner: ' + winner)
+      print('Winner: ' + self.currentColor() + ', Result: ' + self.board.result())
+  
+  def currentColor():
+    return 'White' if self.board.turn == chess.WHITE else 'Black'
 
   def move(self, move):
     self.board.push(move)
@@ -35,22 +42,39 @@ class AutoChess(QWidget):
 
   def calculateNextMove(self):
     move = self.getWhiteMove() if self.board.turn == chess.WHITE else self.getBlackMove()
-    self.think()
     if move in self.board.legal_moves:
       self.move(move)
     else:
      print('invalid move')
 
   def getWhiteMove(self):
-    return self.getRamdomLegalMove()
+    self.think()
+    return self.getBestLegalMove()
 
   def getBlackMove(self):
-    return self.getRamdomLegalMove()
+    self.think()
+    return self.getBestLegalMove()
 
   def getRamdomLegalMove(self):
-    moves = list(self.board.legal_moves)
-    move = moves[randint(0, self.board.legal_moves.count() - 1)]
-    return move
+    print('Getting a ramdom move for ' + self.currentColor())
+    return list(self.board.legal_moves)[randint(0, self.board.legal_moves.count() - 1)]
+
+  def getBestLegalMove(self):
+    moveProbabilities = []
+    for move in list(self.board.legal_moves):
+      probability = self.calculateMoveProbability(self.board.piece_at(move.from_square), move)
+      if probability > 0:
+        moveProbabilities.append(MoveProbability(move, probability))
+    
+    if len(moveProbabilities) > 0:
+      moveProbabilities.sort(key=lambda x: x.probability, reverse=True)
+      return moveProbabilities[0].move
+
+    return self.getRamdomLegalMove()
+
+  def calculateMoveProbability(self, peice, move):
+    probability = randint(0, 100) / 100
+    return probability
 
   def think(self):
     time.sleep(.25)
@@ -61,5 +85,3 @@ if __name__ == "__main__":
   gameThread = threading.Thread(target=autoChess.start)
   gameThread.start()
   app.exec_()
-
-
