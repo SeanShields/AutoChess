@@ -31,9 +31,9 @@ class AutoChess(QWidget):
     while not self.board.is_game_over():
       self.calculateNextMove()
     else:
-      print('Winner: ' + self.currentColor() + ', Result: ' + self.board.result())
+      print('Result: ' + self.board.result())
   
-  def currentColor():
+  def currentColor(self):
     return 'White' if self.board.turn == chess.WHITE else 'Black'
 
   def move(self, move):
@@ -41,19 +41,12 @@ class AutoChess(QWidget):
     self.refresh()
 
   def calculateNextMove(self):
-    move = self.getWhiteMove() if self.board.turn == chess.WHITE else self.getBlackMove()
+    self.think()
+    move = self.getBestLegalMove()
     if move in self.board.legal_moves:
       self.move(move)
     else:
-     print('invalid move')
-
-  def getWhiteMove(self):
-    self.think()
-    return self.getBestLegalMove()
-
-  def getBlackMove(self):
-    self.think()
-    return self.getBestLegalMove()
+     print('Invalid move')
 
   def getRamdomLegalMove(self):
     print('Getting a ramdom move for ' + self.currentColor())
