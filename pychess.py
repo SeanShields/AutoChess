@@ -15,12 +15,14 @@ class MoveProbability:
 class AutoChess(QWidget):
   def __init__(self):
     super().__init__()
-    self.board = chess.Board()
+    widgetHeightAndWidth = 800
+    boardHeightAndWidth = widgetHeightAndWidth - 30
 
+    self.board = chess.Board()
     self.setWindowTitle('Auto Chess')
-    self.setGeometry(100, 100, 800, 800)
+    self.setGeometry(100, 100, widgetHeightAndWidth, widgetHeightAndWidth)
     self.widgetSvg = QSvgWidget(parent=self)
-    self.widgetSvg.setGeometry(10, 10, 770, 770)
+    self.widgetSvg.setGeometry(10, 10, boardHeightAndWidth, boardHeightAndWidth)
     self.widgetSvg.load(chess.svg.board(self.board).encode("UTF-8"))
     self.show()
   
@@ -66,11 +68,12 @@ class AutoChess(QWidget):
     return self.getRamdomLegalMove()
 
   def calculateMoveProbability(self, peice, move):
-    probability = randint(0, 100) / 100
-    return probability
+    if move.drop:
+      return 1.0
+    return randint(0, 100) / 100
 
   def think(self):
-    time.sleep(.25)
+    time.sleep(.01)
 
 if __name__ == "__main__":
   app = QApplication(sys.argv)
