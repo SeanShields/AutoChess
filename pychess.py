@@ -23,17 +23,20 @@ class AutoChess(QWidget):
     self.setGeometry(100, 100, widgetHeightAndWidth, widgetHeightAndWidth)
     self.widgetSvg = QSvgWidget(parent=self)
     self.widgetSvg.setGeometry(10, 10, boardHeightAndWidth, boardHeightAndWidth)
-    self.widgetSvg.load(chess.svg.board(self.board).encode("UTF-8"))
+    self.widgetSvg.load(chess.svg.board(self.board).encode('UTF-8'))
     self.show()
   
   def refresh(self):
-    self.widgetSvg.load(chess.svg.board(self.board).encode("UTF-8"))
+    self.widgetSvg.load(chess.svg.board(self.board).encode('UTF-8'))
 
   def start(self):
     while not self.board.is_game_over():
       self.calculateNextMove()
     else:
       print('Result: ' + self.board.result())
+      self.board.reset()
+      self.refresh()
+      self.start()
   
   def currentColor(self):
     return 'White' if self.board.turn == chess.WHITE else 'Black'
@@ -61,21 +64,20 @@ class AutoChess(QWidget):
       if probability > 0:
         moveProbabilities.append(MoveProbability(move, probability))
     
-    if len(moveProbabilities) > 0:
-      moveProbabilities.sort(key=lambda x: x.probability, reverse=True)
-      return moveProbabilities[0].move
-
-    return self.getRamdomLegalMove()
+    moveProbabilities.sort(key=lambda x: x.probability, reverse=True)
+    return moveProbabilities[0].move
 
   def calculateMoveProbability(self, peice, move):
-    if move.drop:
+    if move.promotion:
       return 1.0
+    elif move.drop:
+      return 0.9
     return randint(0, 100) / 100
 
   def think(self):
     time.sleep(.01)
 
-if __name__ == "__main__":
+if __name__ == '__main__':
   app = QApplication(sys.argv)
   autoChess = AutoChess()
   gameThread = threading.Thread(target=autoChess.start)
