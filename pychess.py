@@ -6,6 +6,7 @@ import threading
 from random import randint
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget
+from weights import Weights
 
 class MoveProbability:
   def __init__(self, move, probability):
@@ -67,15 +68,21 @@ class AutoChess(QWidget):
     moveProbabilities.sort(key=lambda x: x.probability, reverse=True)
     return moveProbabilities[0].move
 
-  def calculateMoveProbability(self, peice, move):
-    if move.promotion:
-      return 1.0
-    elif move.drop:
-      return 0.9
-    return randint(0, 100) / 100
+  def calculateMoveProbability(self, piece, move):
+    strength = self.getStrength(piece)
+    if move.drop:
+      return 1
+    elif move.promotion:
+      return .9
+      
+    return (randint(0, 100) / 100) / (strength / 100)
 
+  def getStrength(self, piece):
+    pieceName = chess.piece_name(piece.piece_type)
+    return Weights[pieceName].value
+    
   def think(self):
-    time.sleep(.01)
+    time.sleep(.25)
 
 if __name__ == '__main__':
   app = QApplication(sys.argv)
