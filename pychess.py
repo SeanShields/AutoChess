@@ -4,6 +4,7 @@ import chess.svg
 import time
 import threading
 import math
+import numpy as np
 from random import randint
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtSvg import QSvgWidget
@@ -20,7 +21,7 @@ class PyChess(QWidget):
     super().__init__()
     self.lastClickedSquare = None
     self.positionCount = 0
-    self.minimaxDepth = 3
+    self.minimaxDepth = 2
     self.XSquares = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
     self.YSquares = [8, 7, 6, 5, 4, 3, 2, 1]
     self.widgetHeightAndWidth = 800
@@ -55,7 +56,7 @@ class PyChess(QWidget):
     releaseSquare = x + str(y)
     if releaseSquare != self.lastClickedSquare:
       move = chess.Move.from_uci(self.lastClickedSquare + x + str(y))
-      if move in self.board.legal_moves:
+      if move in self.getLegalMoves():
         self.move(move)
         cpuMove = threading.Thread(target=self.calculateNextMove)
         cpuMove.start()
@@ -118,12 +119,12 @@ class PyChess(QWidget):
 
   def getRandomLegalMove(self):
     print('Getting a ramdom move for ' + self.currentColor())
-    return list(self.board.legal_moves)[randint(0, self.board.legal_moves.count() - 1)]
+    return list(self.getLegalMoves)[randint(0, self.board.legal_moves.count() - 1)]
 
   def getBestLegalMove(self, depth, isMaximisingPlayer):
     bestMove = None
     bestValue = -9999 if isMaximisingPlayer else 9999
-    for move in list(self.board.legal_moves):
+    for move in self.getLegalMoves():
       self.testMove(move)
       boardValue = self.minimax(depth - 1, not isMaximisingPlayer, -10000, 10000)
       self.undo()
@@ -139,13 +140,16 @@ class PyChess(QWidget):
 
     return bestMove
 
+  def getLegalMoves(self):
+    return np.concatenate((np.array(list(self.board.legal_moves)), np.array(list(self.board.pseudo_legal_moves))))
+
   def minimax(self, depth, isMaximisingPlayer, alpha, beta):
     self.positionCount += 1
     if depth == 0:
       return -self.getBoardValue() if isMaximisingPlayer else self.getBoardValue()
 
     bestValue = -9999 if isMaximisingPlayer else 9999
-    for move in list(self.board.legal_moves):
+    for move in self.getLegalMoves():
       self.testMove(move)
       moveValue = self.minimax(depth - 1, not isMaximisingPlayer, alpha, beta)
       self.undo()
