@@ -5,7 +5,6 @@ import time
 import threading
 import math
 from random import randint
-import drawSvg as draw
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget
@@ -16,10 +15,12 @@ class MoveProbability:
     self.move = move
     self.probability = probability
 
-class AutoChess(QWidget):
+class PyChess(QWidget):
   def __init__(self):
     super().__init__()
     self.lastClickedSquare = None
+    self.positionCount = 0
+    self.minimaxDepth = 4
     self.XSquares = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
     self.YSquares = [8, 7, 6, 5, 4, 3, 2, 1]
     self.widgetHeightAndWidth = 800
@@ -84,6 +85,9 @@ class AutoChess(QWidget):
   def autoPlay(self):
     while not self.board.is_game_over():
       self.calculateNextMove()
+      if self.board.is_game_over():
+        print('Result: ' + self.board.result())
+        return
     else:
       print('Result: ' + self.board.result())
       self.board.reset()
@@ -97,51 +101,86 @@ class AutoChess(QWidget):
     self.board.push(move)
     self.refresh()
 
+  def testMove(self, move):
+    self.board.push(move)
+  
+  def undo(self):
+    self.board.pop()
+
   def calculateNextMove(self):
-    if self.board.is_game_over():
-      print('Result: ' + self.board.result())
-      return
+    self.positionCount = 0
+    isMaximisingPlayer = self.board.turn == chess.BLACK
+    move = self.getBestLegalMove(self.minimaxDepth, isMaximisingPlayer)
+    if move is None:
+      move = self.getRandomLegalMove()
+    print(self.currentColor() + ' evaluated ' + str(self.positionCount) + ' board positions')
+    self.move(move)
 
-    self.think()
-    move = self.getBestLegalMove()
-    if move in self.board.legal_moves:
-      self.move(move)
-    else:
-     print('Invalid move')
-
-  def getRamdomLegalMove(self):
+  def getRandomLegalMove(self):
     print('Getting a ramdom move for ' + self.currentColor())
     return list(self.board.legal_moves)[randint(0, self.board.legal_moves.count() - 1)]
 
-  def getBestLegalMove(self):
-    moveProbabilities = []
+  def getBestLegalMove(self, depth, isMaximisingPlayer):
+    bestMove = None
+    bestValue = -9999 if isMaximisingPlayer else 9999
     for move in list(self.board.legal_moves):
-      probability = self.calculateMoveProbability(self.board.piece_at(move.from_square), move)
-      if probability > 0:
-        moveProbabilities.append(MoveProbability(move, probability))
-    
-    moveProbabilities.sort(key=lambda x: x.probability, reverse=True)
-    return moveProbabilities[0].move
+      self.testMove(move)
+      boardValue = self.minimax(depth - 1, not isMaximisingPlayer, -10000, 10000)
+      self.undo()
 
-  def calculateMoveProbability(self, piece, move):
-    strength = self.getStrength(piece)
-    if move.drop:
-      return 1
-    elif move.promotion:
-      return .9
+      if isMaximisingPlayer:
+        if boardValue >= bestValue:
+          bestValue = boardValue
+          bestMove = move
+      else:
+          if boardValue <= bestValue:
+            bestValue = boardValue
+            bestMove = move
+
+    return bestMove
+
+  def minimax(self, depth, isMaximisingPlayer, alpha, beta):
+    self.positionCount += 1
+    if depth == 0:
+      return -self.getBoardValue() if isMaximisingPlayer else self.getBoardValue()
+
+    bestValue = -9999 if isMaximisingPlayer else 9999
+    for move in list(self.board.legal_moves):
+      self.testMove(move)
+      moveValue = self.minimax(depth - 1, not isMaximisingPlayer, alpha, beta)
+      self.undo()
       
-    return (randint(0, 100) / 100) / (strength / 100)
+      if isMaximisingPlayer:
+        bestValue = max(bestValue, moveValue)
+        alpha = max(alpha, bestValue)
+      else:
+        bestValue = min(bestValue, moveValue)
+        beta = min(beta, bestValue)
 
-  def getStrength(self, piece):
+      if beta <= alpha:
+        return bestValue
+
+    return bestValue
+
+  def getPieceStrength(self, piece):
+    if piece is None:
+      return 0
+      
     pieceName = chess.piece_name(piece.piece_type)
     return Weights[pieceName].value
+
+  def getBoardValue(self):
+    totalValue = 0
+    for square in range(0, 64):
+      totalValue += self.getPieceStrength(self.board.piece_at(square))
+    return totalValue
     
   def think(self):
-    time.sleep(1)
+    time.sleep(.25)
 
 if __name__ == '__main__':
   app = QApplication(sys.argv)
-  autoChess = AutoChess()
-  # gameThread = threading.Thread(target=autochess.calculateNexMove)
-  # gameThread.start()
+  pyChess = PyChess()
+  gameThread = threading.Thread(target=pyChess.autoPlay)
+  gameThread.start()
   app.exec_()
