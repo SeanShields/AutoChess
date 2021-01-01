@@ -20,7 +20,7 @@ class PyChess(QWidget):
     super().__init__()
     self.lastClickedSquare = None
     self.positionCount = 0
-    self.minimaxDepth = 4
+    self.minimaxDepth = 3
     self.XSquares = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
     self.YSquares = [8, 7, 6, 5, 4, 3, 2, 1]
     self.widgetHeightAndWidth = 800
@@ -149,7 +149,7 @@ class PyChess(QWidget):
       self.testMove(move)
       moveValue = self.minimax(depth - 1, not isMaximisingPlayer, alpha, beta)
       self.undo()
-      
+
       if isMaximisingPlayer:
         bestValue = max(bestValue, moveValue)
         alpha = max(alpha, bestValue)
@@ -181,6 +181,6 @@ class PyChess(QWidget):
 if __name__ == '__main__':
   app = QApplication(sys.argv)
   pyChess = PyChess()
-  gameThread = threading.Thread(target=pyChess.autoPlay)
-  gameThread.start()
+  # gameThread = threading.Thread(target=pyChess.autoPlay)
+  # gameThread.start()
   app.exec_()
