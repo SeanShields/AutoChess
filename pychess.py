@@ -10,6 +10,7 @@ from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget
 from weights import Weights
+from stopwatch import Stopwatch
 
 class MoveProbability:
   def __init__(self, move, probability):
@@ -56,12 +57,30 @@ class PyChess(QWidget):
     releaseSquare = x + str(y)
     if releaseSquare != self.lastClickedSquare:
       move = chess.Move.from_uci(self.lastClickedSquare + x + str(y))
-      if move in self.getLegalMoves():
+      isLegal = self.isMoveLegal(move)
+      if not isLegal and self.isPromotable(move):
+        move.promotion = 'Q'
         self.move(move)
-        cpuMove = threading.Thread(target=self.calculateNextMove)
-        cpuMove.start()
+      elif isLegal:
+        self.move(move)
+      else:
+        return
+
+      cpuMove = threading.Thread(target=self.calculateNextMove)
+      cpuMove.start()
       self.lastClickedSquare = None
 
+  def isMoveLegal(self, move):
+    return move in self.board.legal_moves or self.isPromotable(move)
+
+  def isPromotable(self, move):
+    piece = self.board.piece_at(move.from_square)
+    if piece is None:
+      return False
+    
+    name = chess.piece_name(piece.piece_type)
+    return name == 'pawn' and (move.to_square in range(0, 9) or move.to_square in range(56, 65))
+  
   def getXSquare(self, x):
     squareStart = self.padding
     for xSquare in self.XSquares:
@@ -109,12 +128,17 @@ class PyChess(QWidget):
     self.board.pop()
 
   def calculateNextMove(self):
+    stopwatch = Stopwatch() 
+    stopwatch.start()
+
     self.positionCount = 0
     isMaximisingPlayer = self.board.turn == chess.BLACK
     move = self.getBestLegalMove(self.minimaxDepth, isMaximisingPlayer)
     if move is None:
       move = self.getRandomLegalMove()
-    print(self.currentColor() + ' evaluated ' + str(self.positionCount) + ' board positions')
+
+    print(self.currentColor() + ' evaluated ' + str(self.positionCount) + ' moves in ' + str(round(stopwatch.duration, 2)) + ' seconds')
+    stopwatch.reset()
     self.move(move)
 
   def getRandomLegalMove(self):
@@ -124,7 +148,7 @@ class PyChess(QWidget):
   def getBestLegalMove(self, depth, isMaximisingPlayer):
     bestMove = None
     bestValue = -9999 if isMaximisingPlayer else 9999
-    for move in self.getLegalMoves():
+    for move in self.board.legal_moves:
       self.testMove(move)
       boardValue = self.minimax(depth - 1, not isMaximisingPlayer, -10000, 10000)
       self.undo()
@@ -134,9 +158,9 @@ class PyChess(QWidget):
           bestValue = boardValue
           bestMove = move
       else:
-          if boardValue <= bestValue:
-            bestValue = boardValue
-            bestMove = move
+        if boardValue <= bestValue:
+          bestValue = boardValue
+          bestMove = move
 
     return bestMove
 
