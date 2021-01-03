@@ -1,0 +1,11 @@
+version: '3.7'
+
+services:
+  pychess:
+    image: pychess
+    hostname: pychess
+    container_name: pychess
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    entrypoint: ["python", "pychess.py"]

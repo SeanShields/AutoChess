@@ -6,6 +6,7 @@ import threading
 import math
 import numpy as np
 from random import randint
+from PyQt5 import QtGui
 from PyQt5.QtCore import pyqtSlot, Qt
 from PyQt5.QtSvg import QSvgWidget
 from PyQt5.QtWidgets import QApplication, QWidget
@@ -23,6 +24,7 @@ class PyChess(QWidget):
         super().__init__()
         self.lastClickedSquare = None
         self.positionCount = 0
+        self.isPlayerTurn = True
         self.minimaxDepth = 3
         self.XSquares = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']
         self.YSquares = [8, 7, 6, 5, 4, 3, 2, 1]
@@ -31,7 +33,7 @@ class PyChess(QWidget):
         self.squareHeightAndWidth = (
             self.widgetHeightAndWidth - self.padding * 2) / 8
         self.board = chess.Board()
-        self.setWindowTitle('Auto Chess')
+        self.setWindowTitle('PyChess')
         self.widgetSvg = QSvgWidget(parent=self)
         self.widgetSvg.setGeometry(
             0, 0, self.widgetHeightAndWidth, self.widgetHeightAndWidth)
@@ -40,14 +42,27 @@ class PyChess(QWidget):
 
     @pyqtSlot(QWidget)
     def mousePressEvent(self, event):
+        if not self.isPlayerTurn:
+            return
+        
         x = self.getXSquare(event.x())
         y = self.getYSquare(event.y())
-        if y is not None and x is not None:
-            self.lastClickedSquare = x + str(y)
-            # TODO: Draw line/arrow under cursor
+        if y is None or x is None:
+            return
+        
+        self.lastClickedSquare = x + str(y)
+        square = chess.parse_square(self.lastClickedSquare)
+        piece = self.board.piece_at(square)
+        if piece is None:
+            return
+        
+        # svg = chess.svg.piece(piece)
+        super().setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
 
     @pyqtSlot(QWidget)
     def mouseReleaseEvent(self, event):
+        super().setCursor(QtGui.QCursor(Qt.ArrowCursor))
+
         if self.lastClickedSquare is None:
             return
 
@@ -68,6 +83,7 @@ class PyChess(QWidget):
             else:
                 return
 
+            self.isPlayerTurn = False
             cpuMove = threading.Thread(target=self.calculateNextMove)
             cpuMove.start()
             self.lastClickedSquare = None
@@ -134,13 +150,14 @@ class PyChess(QWidget):
         isMaximisingPlayer = self.board.turn == chess.BLACK
         move = self.getBestLegalMove(self.minimaxDepth, isMaximisingPlayer)
         if move is None:
-            # move = self.getRandomLegalMove()
             print('Result: ' + self.board.result())
+            return
 
         print(self.currentColor() + ' evaluated ' + str(self.positionCount) +
               ' moves in ' + str(round(stopwatch.duration, 2)) + ' seconds')
         stopwatch.reset()
         self.move(move)
+        self.isPlayerTurn = True
 
     def getRandomLegalMove(self):
         print('Getting a ramdom move for ' + self.currentColor())
@@ -152,7 +169,7 @@ class PyChess(QWidget):
         for move in self.board.legal_moves:
             self.testMove(move)
             boardValue = self.minimax(
-                depth - 1, not isMaximisingPlayer, -10000, 10000)
+                depth - 1, not isMaximisingPlayer, -100000, 100000)
             self.undo()
 
             if isMaximisingPlayer:
@@ -242,36 +259,37 @@ class PyChess(QWidget):
                     5, 10, 10, 10, 10, 10, 10,  5,
                     0,  0,  0,  0,  0,  0,  0,  0]
         elif piece == 'queen':
-                weights = [
-                        -20, -10, -10, -5, -5, -10, -10, -20,
-                        -10,  0,  5,  0,  0,  0,  0, -10,
-                        -10,  5,  5,  5,  5,  5,  0, -10,
-                        0,  0,  5,  5,  5,  5,  0, -5,
-                        -5,  0,  5,  5,  5,  5,  0, -5,
-                        -10,  0,  5,  5,  5,  5,  0, -10,
-                        -10,  0,  0,  0,  0,  0,  0, -10,
-                        -20, -10, -10, -5, -5, -10, -10, -20]
+            weights = [
+                    -20, -10, -10, -5, -5, -10, -10, -20,
+                    -10,  0,  5,  0,  0,  0,  0, -10,
+                    -10,  5,  5,  5,  5,  5,  0, -10,
+                    0,  0,  5,  5,  5,  5,  0, -5,
+                    -5,  0,  5,  5,  5,  5,  0, -5,
+                    -10,  0,  5,  5,  5,  5,  0, -10,
+                    -10,  0,  0,  0,  0,  0,  0, -10,
+                    -20, -10, -10, -5, -5, -10, -10, -20]
         elif piece == 'king':
-                if self.isLateGame():
-                    weights = [
-                        -50,-30,-30,-30,-30,-30,-30,-50,
-                        -30,-30,  0,  0,  0,  0,-30,-30,
-                        -30,-10, 20, 30, 30, 20,-10,-30,
-                        -30,-10, 30, 40, 40, 30,-10,-30,
-                        -30,-10, 30, 40, 40, 30,-10,-30,
-                        -30,-10, 20, 30, 30, 20,-10,-30,
-                        -30,-20,-10,  0,  0,-10,-20,-30,
-                        -50,-40,-30,-20,-20,-30,-40,-50]
-                else:
-                    weights = [
-                            20, 30, 10,  0,  0, 10, 30, 20,
-                            20, 20,  0,  0,  0,  0, 20, 20,
-                            -10, -20, -20, -20, -20, -20, -20, -10,
-                            -20, -30, -30, -40, -40, -30, -30, -20,
-                            -30, -40, -40, -50, -50, -40, -40, -30,
-                            -30, -40, -40, -50, -50, -40, -40, -30,
-                            -30, -40, -40, -50, -50, -40, -40, -30,
-                            -30, -40, -40, -50, -50, -40, -40, -30]
+            if self.isLateGame():
+                print('late')
+                weights = [
+                    -50,-30,-30,-30,-30,-30,-30,-50,
+                    -30,-30,  0,  0,  0,  0,-30,-30,
+                    -30,-10, 20, 30, 30, 20,-10,-30,
+                    -30,-10, 30, 40, 40, 30,-10,-30,
+                    -30,-10, 30, 40, 40, 30,-10,-30,
+                    -30,-10, 20, 30, 30, 20,-10,-30,
+                    -30,-20,-10,  0,  0,-10,-20,-30,
+                    -50,-40,-30,-20,-20,-30,-40,-50]
+            else:
+                weights = [
+                        20, 30, 10,  0,  0, 10, 30, 20,
+                        20, 20,  0,  0,  0,  0, 20, 20,
+                        -10, -20, -20, -20, -20, -20, -20, -10,
+                        -20, -30, -30, -40, -40, -30, -30, -20,
+                        -30, -40, -40, -50, -50, -40, -40, -30,
+                        -30, -40, -40, -50, -50, -40, -40, -30,
+                        -30, -40, -40, -50, -50, -40, -40, -30,
+                        -30, -40, -40, -50, -50, -40, -40, -30]
 
         if self.board.turn == chess.BLACK:
             return list(reversed(weights))[square]
@@ -279,16 +297,17 @@ class PyChess(QWidget):
             return weights[square]
 
     def isLateGame(self):
-            queenCount = 0
-            for square in range(0, 64):
-                piece = self.board.piece_at(square)
-                if piece is None:
-                    continue
+        # TODO: fix this
+        queenCount = 0
+        for square in range(0, 64):
+            piece = self.board.piece_at(square)
+            if piece is None:
+                continue
 
-                if chess.piece_name(piece.piece_type) == 'queen':
-                    queenCount += 1
+            if piece.piece_type == 5:
+                queenCount += 1
 
-            return queenCount == 2
+        return queenCount == 0
 
     def getBoardValue(self):
         totalValue = 0

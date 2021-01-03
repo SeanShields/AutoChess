@@ -1,0 +1,4 @@
+chess
+numpy
+PyQt5
+stopwatch.py
