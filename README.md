@@ -8,5 +8,5 @@ python pychess.py
 
 ### or, with Docker:
 ```
-docker-compose up
+docker-compose build && docker-compose up
 ```
