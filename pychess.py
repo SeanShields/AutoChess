@@ -56,6 +56,7 @@ class PyChess(QWidget):
         if piece is None:
             return
         
+        # TODO: draw this SVG under the cursor, or update the cursor to this SVG
         # svg = chess.svg.piece(piece)
         super().setCursor(QtGui.QCursor(Qt.ClosedHandCursor))
 
