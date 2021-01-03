@@ -79,9 +79,10 @@ class PyChess(QWidget):
             if self.isPromotable(move):
                 move.promotion = 5 # promote to queen
                 self.move(move)
-            elif self.isMoveLegal(move):
+            elif move in self.board.legal_moves:
                 self.move(move)
             else:
+                # TODO: illegal move, put the piece back to lastClickedSquare
                 return
 
             self.isPlayerTurn = False
@@ -89,15 +90,12 @@ class PyChess(QWidget):
             cpuMove.start()
             self.lastClickedSquare = None
 
-    def isMoveLegal(self, move):
-        return move in self.board.legal_moves
-
     def isPromotable(self, move):
-        piece = self.board.piece_at(move.from_square)
-        if piece is None:
+        pieceType = self.board.piece_type_at(move.from_square)
+        if pieceType is None:
             return False
 
-        name = chess.piece_name(piece.piece_type)
+        name = chess.piece_name(pieceType)
         return name == 'pawn' and (move.to_square in range(0, 9) or move.to_square in range(56, 65))
 
     def getXSquare(self, x):
@@ -134,8 +132,19 @@ class PyChess(QWidget):
         return 'White' if self.board.turn == chess.WHITE else 'Black'
 
     def move(self, move):
+        self.logMoveInfo(move)
         self.board.push(move)
         self.refresh()
+    
+    def logMoveInfo(self, move):
+        pieceToMove = self.board.piece_type_at(move.from_square)
+        pieceToMoveName = chess.piece_name(pieceToMove)
+        info = self.currentColor() + ': ' + pieceToMoveName + ' - ' + move.uci()
+        pieceToTake = self.board.piece_type_at(move.to_square)
+        if pieceToTake is not None:
+            pieceToTakeName = chess.piece_name(pieceToTake)
+            info += ', drop ' + pieceToTakeName
+        print(info)
 
     def testMove(self, move):
         self.board.push(move)
@@ -292,13 +301,15 @@ class PyChess(QWidget):
                         -30, -40, -40, -50, -50, -40, -40, -30,
                         -30, -40, -40, -50, -50, -40, -40, -30]
 
-        if self.board.turn == chess.BLACK:
+        if self.board.turn == chess.WHITE:
             return list(reversed(weights))[square]
         else:
             return weights[square]
 
     def isLateGame(self):
         # TODO: fix this
+        return False
+
         queenCount = 0
         for square in range(0, 64):
             piece = self.board.piece_at(square)
@@ -323,6 +334,6 @@ class PyChess(QWidget):
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     pyChess = PyChess()
-    # gameThread = threading.Thread(target=pyChess.autoPlay)
-    # gameThread.start()
+    gameThread = threading.Thread(target=pyChess.autoPlay)
+    gameThread.start()
     app.exec_()
