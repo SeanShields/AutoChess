@@ -179,7 +179,7 @@ class PyChess(QWidget):
         for move in self.board.legal_moves:
             self.testMove(move)
             boardValue = self.minimax(
-                depth - 1, not isMaximisingPlayer, -100000, 100000)
+                depth - 1, not isMaximisingPlayer, -10000, 10000)
             self.undo()
 
             if isMaximisingPlayer:
